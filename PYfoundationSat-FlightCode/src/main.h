@@ -21,9 +21,17 @@
 *******************************************************************************/
 
 #include <Arduino.h>
-#include <LoraMessage.h>
 #include <Debugging.h>
 #include "LowPower.h"
+
+//####################  BME680 ####################
+//####################  BME680 ####################
+#include <Wire.h>
+#include <Adafruit_Sensor.h>
+#include "Adafruit_BME680.h"
+
+//####################  BME680 ####################
+//####################  BME680 ####################
 
 //####################  TTN ####################
 //####################  TTN ####################
@@ -38,8 +46,6 @@
 #include <LoraMessage.h>
 #include "settings.h"
 
-
-
 #define addr 0x4A
 #define LedPin 9
 #define ADR_MODE 1
@@ -50,16 +56,18 @@
 // -----------------------------------------------------------------------------
 // Gyro/Magno/Accel structure
 // -----------------------------------------------------------------------------
+/*
 struct threeDData 
 {
   	uint8_t x;
 	uint8_t y;
 	uint8_t z;
 };
-
+*/
 // -----------------------------------------------------------------------------
 // TTN payload data structure - see https://www.thethingsnetwork.org/docs/devices/bytes.html
 // -----------------------------------------------------------------------------
+/*
 struct
 {
   uint8_t sensorType;
@@ -67,27 +75,35 @@ struct
   float field2; 
 	uint16_t voltage;
 } packetData;
-
-// Set the sensor type 
-static const uint8_t sensorType = SENSOR_01_DHT30; // for test purposes
-
+*/
 // TTN *****************************  IMPORTANT 
 // 
 // Set the following three values to match your unique AmbaSat-1 satellite   
 // 
 // The Network Session Key
-static const PROGMEM u1_t NWKSKEY[16] = {0x38,0xD8,0xE7,0x52,0xEB,0x4F,0x81,0x0F,0xD9,0x55,0xAD,0xA4,0x1C,0xC2,0x5E,0xD1}; //<< CHANGE
+static const PROGMEM u1_t NWKSKEY[16] = {0x03,0x80,0xD8,0x0E,0x70,0x52,0x0E,0xB0,0x4F,0x08,0x10,0x0F,0x0D,0x90,0xA5,0x5A}; //<< CHANGE
 
 // LoRaWAN AppSKey, application session key
-static const u1_t PROGMEM APPSKEY[16] = {0x6B,0x98,0xF3,0x21,0x46,0xBF,0x35,0x20,0x21,0x99,0xBE,0x13,0x45,0x34,0x4C,0x6B}; //<< CHANGE
+static const u1_t PROGMEM APPSKEY[16] = {0x06,0xB0,0x98,0x0F,0x30,0x21,0x04,0x60,0xBF,0x03,0x50,0x20,0x02,0x10,0x5A,0xA5}; //<< CHANGE
 
 // LoRaWAN end-device address (DevAddr)
-static const u4_t DEVADDR = 0x26011D67 ;  //<< CHANGE
+static const u4_t DEVADDR = 0x26021CD4;  //<< CHANGE
 
+/*
+const char *devAddr = "26021CD4";
+const char *nwkSKey = "0380D80E70520EB04F08100F0D90A55A";
+const char *appSKey = "06B0980F30210460BF03502002105AA5";
+Application ID
+emegency0001
+Device ID
+cjcontainner0001
+Description
+PYFoundationSat-1
+*/
 /***********************************  IMPORTANT */
 
 
-int sleepcycles = 130; // 130 X 8 seconds = ~17 mins sleep
+int sleepcycles = 13; // 130 X 8 seconds = ~17 mins sleep
 
 
 // These callbacks are only used in over-the-air activation, so they are
@@ -98,9 +114,10 @@ void os_getArtEui (u1_t* buf) { }
 void os_getDevEui (u1_t* buf) { }
 void os_getDevKey (u1_t* buf) { }
 */
+/*
 static osjob_t sendjob;
 static osjob_t initjob;
-
+*/
 /*mapping
 const lmic_pinmap lmic_pins = {
   .nss = 10,
@@ -111,6 +128,16 @@ const lmic_pinmap lmic_pins = {
 */
 //####################  TTN ####################
 //####################  TTN ####################
+
+//####################  BME680 ####################
+//####################  BME680 ####################
+
+#define SEALEVELPRESSURE_HPA (1013.25)
+#define BME680_DEFAULT_ADDRESS_PYFOUNDATIONSAT  (0x76)     ///< AmbaSat BME680 address
+
+//####################  BME680 ####################
+//####################  BME680 ####################
+
 #define addr 0x4A
 #define SERIAL_BAUD         9600 
 #define LED_PIN             9
@@ -128,6 +155,11 @@ const lmic_pinmap lmic_pins = {
 // LSM9DS1 Addresses
 #define LSM9DS1_M	0x1E  // Mag address
 #define LSM9DS1_AG	0x6B  // AG address
+
+
+// Set the sensor type 
+static const uint8_t sensorType = SENSOR_03_BME680; // for test purposes
+
 
 uint16_t readVcc();
 

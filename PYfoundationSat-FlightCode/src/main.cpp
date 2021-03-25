@@ -69,15 +69,25 @@
 *
 *******************************************************************************/
 #include "main.h"
-#include "AmbaSatSHT31.h"
+//#include "AmbaSatSHT31.h"
 #include "AmbaSatLMIC.h"
 #include "AmbaSatLSM9DS1.h"
 
 
 // AmbaSat Library objects (see: https://platformio.org/lib/search?query=ambasat)
-AmbaSatSHT31 *pyfoundationSatSHT31;
+//AmbaSatSHT31 *pyfoundationSatSHT31;
 AmbaSatLMIC *pyfoundationSatLMIC;
 AmbaSatLSM9DS1 *pyfoundationSatLSM9DS1;
+
+//####################  BME680 ####################
+//####################  BME680 ####################
+Adafruit_BME680 bme; // I2C
+
+//#define SEALEVELPRESSURE_HPA (1013.25)
+//#define BME680_DEFAULT_ADDRESS_PYFOUNDATIONSAT  (0x76)     ///< AmbaSat BME680 address
+
+//####################  BME680 ####################
+//####################  BME680 ####################
 
 // ============================================================================
 
@@ -110,7 +120,7 @@ void setup()
     digitalWrite(LED_PIN, LOW);
 
     // Create the sensor object
-    pyfoundationSatSHT31 = new AmbaSatSHT31();
+    //pyfoundationSatSHT31 = new AmbaSatSHT31();
 
     // Create the IMU object
     pyfoundationSatLSM9DS1 = new AmbaSatLSM9DS1();
@@ -118,9 +128,22 @@ void setup()
     // Initialise IMU
     if (pyfoundationSatLSM9DS1->begin(LSM9DS1_AG, LSM9DS1_M) == false) 
     {
-        PRINTLN_DEBUG(F("Failed to communicate with the AmbaSat-1 LSM9DS1 IMU"));
-        while (1);
+        PRINTLN_DEBUG(F("F LSM9DS1"));
+        //while (1);
     }
+
+    if (!bme.begin(BME680_DEFAULT_ADDRESS_PYFOUNDATIONSAT)) 
+    {
+        PRINTLN_DEBUG(F("F BME680 "));
+        //while (1);
+    }
+
+    // Set up oversampling and filter initialization
+    bme.setTemperatureOversampling(BME680_OS_8X);
+    bme.setHumidityOversampling(BME680_OS_2X);
+    bme.setPressureOversampling(BME680_OS_4X);
+    bme.setIIRFilterSize(BME680_FILTER_SIZE_3);
+    bme.setGasHeater(320, 150); // 320*C for 150 ms
 
     PRINTLN_DEBUG("Setup complete");    
 }
@@ -129,12 +152,14 @@ void setup()
 
 void loop()
 {
-    float temperature, humidity;
+    // Turn the LED OFF
+    digitalWrite(LED_PIN, HIGH);
     uint16_t voltage;
     LoraMessage message;
 
     voltage = readVcc();
 
+/*
     // read SHT31
     if (pyfoundationSatSHT31->getSensorReading(&temperature, &humidity)  == false) 
     {
@@ -149,13 +174,81 @@ void loop()
     PRINTLN_DEBUG(voltage);   
 
     uint8_t humidityEncoded = (uint8_t) humidity;       // eg. 55.4% becomes 55% 
+    */
+
+
+//####################  BME680 ####################
+//####################  BME680 ####################
+
+    // Tell BME680 to begin measurement.
+    /*
+    unsigned long endTime = bme.beginReading();
+    if (endTime == 0) {
+        PRINTLN_DEBUG(F("Failed to begin reading :("));
+        return;
+    }
+   
+    PRINT_DEBUG(F("Reading started at "));
+    PRINT_DEBUG(millis());
+    PRINT_DEBUG(F(" and will finish at "));
+    PRINTLN_DEBUG(endTime);
+
+    PRINTLN_DEBUG(F("You can do other work during BME680 measurement."));
+    delay(50); // This represents parallel work.
+
+    // There's no need to delay() until millis() >= endTime: bme.endReading()
+    // takes care of that. It's okay for parallel work to take longer than
+    // BME680's measurement time.
+
+    // Obtain measurement results from BME680. Note that this operation isn't
+    // instantaneous even if milli() >= endTime due to I2C/SPI latency.
+    if (!bme.endReading()) 
+    {
+        PRINTLN_DEBUG(F("Failed to complete reading :("));
+        return;
+    }
+
+    PRINT_DEBUG(F("Reading completed at "));
+    PRINTLN_DEBUG(millis());
+   */
+    //pressure = bme.pressure / 100.0;
+    //altitude = bme.readAltitude(SEALEVELPRESSURE_HPA);
+   // gas = bme.gas_resistance / 1000.0;
+   // temperature = bme.temperature;
+    //humidity = bme.humidity;
+///*
+    PRINT_DEBUG(F("PRESSURE: "));
+    PRINT_DEBUG(bme.pressure / 100.0);   
+    PRINT_DEBUG(F(" hPa"));
+   // PRINT_DEBUG(F(", ALTITUDE: "));
+    //PRINT_DEBUG(bme.readAltitude(SEALEVELPRESSURE_HPA));   
+   // PRINT_DEBUG(F(" mts"));
+    PRINT_DEBUG(F(", GAS: "));
+    PRINTLN_DEBUG(bme.gas_resistance / 1000.0);
+    PRINT_DEBUG(F(" KOhms"));
+    PRINT_DEBUG(F("TEMP: "));
+    PRINT_DEBUG(bme.temperature);   
+    PRINT_DEBUG(F(" *C"));
+    PRINT_DEBUG(F(", HUM: "));
+    PRINT_DEBUG(bme.humidity);   
+    PRINT_DEBUG(F(" %"));
+    PRINT_DEBUG(F(", VOLT: "));
+    PRINTLN_DEBUG(voltage);
+    PRINT_DEBUG(F(" Volts"));
+//*/
+//####################  BME680 ####################
+//####################  BME680 ####################
+
+    uint8_t pressureEncoded = (uint8_t) bme.pressure / 100;       // eg. 55.4% becomes 55% 
+    uint8_t humidityEncoded = (uint8_t) bme.humidity;       // eg. 55.4% becomes 55% 
+
     uint8_t voltsEncoded = (uint8_t) (voltage / 100);   // eg. 2840 millivolts becomes 28 and in the Dashboard decoded to 2.8 volts
 
     // read LSM9DS1
     pyfoundationSatLSM9DS1->readGyro();
     pyfoundationSatLSM9DS1->readAccel();
     pyfoundationSatLSM9DS1->readMag();
-
+///*
     PRINT_DEBUG(F("GYRO: "));
     PRINT_DEBUG(pyfoundationSatLSM9DS1->gx);
     PRINT_DEBUG(F(", "));
@@ -176,8 +269,7 @@ void loop()
     PRINT_DEBUG(pyfoundationSatLSM9DS1->my);
     PRINT_DEBUG(F(", "));
     PRINTLN_DEBUG(pyfoundationSatLSM9DS1->mz);  
- 
-
+ //*/
    // ***********************************************
    // Prepare message payload. NOTE: The order of the
    // payload data is important for the TTN decoder. 
@@ -185,9 +277,15 @@ void loop()
    // **********************************************
 
     // Temperature uses a 16bit two's complement with two decimals, so the range is -327.68 to +327.67 degrees
-    message.addTemperature(temperature); 
+ 
+    message.addUint8(pressureEncoded); 
+   // message.addUint16(bme.readAltitude(SEALEVELPRESSURE_HPA)); 
+    message.addUint16(bme.gas_resistance / 1000.0); 
+  
+    message.addTemperature(bme.temperature); 
     
     message.addUint8(humidityEncoded);
+    
     message.addUint8(voltsEncoded);
 
     message.addUint16(pyfoundationSatLSM9DS1->gx); 
@@ -203,8 +301,10 @@ void loop()
     message.addUint16(pyfoundationSatLSM9DS1->mz); 
 
     // send payload 
-    pyfoundationSatLMIC->sendSensorPayload(SENSOR_01_SHT31, message);  
+    pyfoundationSatLMIC->sendSensorPayload(SENSOR_03_BME680, message);  
 
+    // Turn the LED OFF
+    digitalWrite(LED_PIN, LOW);
     // sleep 8 seconds * sleepcycles
     for (int i=0; i < sleepcycles; i++)
     {
